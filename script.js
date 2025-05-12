@@ -93,6 +93,7 @@ function renderTree() {
   populateParentSelect();
   populateBranchSelect();
   saveToLocal();
+  console.log("Rendered tree with", Object.keys(family).length, "members");
 }
 
 function populateParentSelect() {
@@ -134,7 +135,7 @@ function addMember() {
 
   clearForm();
   renderTree();
-  saveToLocal(); // ✅ Save after adding
+  saveToLocal(); // ✅ Ensure save happens here
 }
 
 function editMember(name) {
@@ -186,7 +187,7 @@ function updateMember() {
 
   clearForm();
   renderTree();
-  saveToLocal(); // ✅ Save after updating
+  saveToLocal(); // ✅ Ensure save happens here
 }
 
 function deleteMember(name) {
@@ -194,7 +195,7 @@ function deleteMember(name) {
   Object.values(family).forEach(m => m.children = m.children.filter(c => c !== name));
   delete family[name];
   renderTree();
-  saveToLocal(); // ✅ Save after deleting
+  saveToLocal(); // ✅ Ensure save happens here
 }
 
 function clearForm() {
@@ -208,18 +209,28 @@ function saveToLocal() {
   const user = localStorage.getItem("user");
   if (!user) return;
   localStorage.setItem(`tree_${user}`, JSON.stringify(family));
+  console.log("✅ Tree saved for user:", user);
 }
 
 function loadFromLocal() {
   const user = localStorage.getItem("user");
   if (!user) {
+    console.warn("No user in localStorage, redirecting to login.");
     window.location.href = "login.html";
     return;
   }
+
   const data = localStorage.getItem(`tree_${user}`);
   if (data) {
-    family = JSON.parse(data);
-    renderTree();
+    try {
+      family = JSON.parse(data);
+      console.log("✅ Loaded tree for", user, family);
+      renderTree();
+    } catch (e) {
+      console.error("❌ Error parsing saved tree:", e);
+    }
+  } else {
+    console.warn("⚠️ No tree data found for user:", user);
   }
 }
 
