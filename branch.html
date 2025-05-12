@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Family Branch Tree</title>
+  <script>
+    if (!localStorage.getItem("user")) {
+      window.location.href = "login.html";
+    }
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gojs/2.3.14/go.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: sans-serif;
+    }
+    #topbar {
+      padding: 10px;
+      display: flex;
+      gap: 10px;
+      background: #f0f0f0;
+      align-items: center;
+    }
+    #tree {
+      width: 100%;
+      height: 60vh;
+    }
+    .form-section {
+      padding: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      background: #fafafa;
+    }
+    .form-section input, .form-section select, .form-section button {
+      padding: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div id="topbar">
+    <button onclick="window.location.href='index.html'">🔙 Back to Main Tree</button>
+    <button onclick="exportAsPNG()">📸 Export as PNG</button>
+    <button onclick="signOut()">🚪 Sign Out</button>
+  </div>
+
+  <div id="tree"></div>
+
+  <div class="form-section">
+    <input type="text" id="nameInput" placeholder="Name" required />
+    <input type="text" id="spouseInput" placeholder="Spouse(s), comma-separated" />
+    <input type="text" id="birthYearInput" placeholder="Year Born" />
+    <input type="text" id="birthPlaceInput" placeholder="Place Born" />
+    <select id="parentSelect">
+      <option value="">No Parent (Root)</option>
+    </select>
+    <button onclick="updateNode()">Update</button>
+  </div>
+
+  <script>
+    const user = localStorage.getItem("user");
+    const fullTree = JSON.parse(localStorage.getItem(`tree_${user}`) || '{}');
+    const rootName = new URLSearchParams(window.location.search).get('member') || localStorage.getItem('branchRoot');
+
+    if (!rootName || !fullTree[rootName]) {
+      alert("❌ Could not load branch. Make sure you opened this page from the main tree.");
+      throw new Error("Branch root not found.");
+    }
+
+    const nameInput = document.getElementById("nameInput");
+    const spouseInput = document.getElementById("spouseInput");
+    const birthYearInput = document.getElementById("birthYearInput");
+    const birthPlaceInput = document.getElementById("birthPlaceInput");
+    const parentSelect = document.getElementById("parentSelect");
+
+    const descendants = {};
+    function collectBranch(name) {
+      if (!fullTree[name]) return;
+      const person = fullTree[name];
+      descendants[name] = { ...person, children: [...person.children] };
+      person.children.forEach(child => collectBranch(child));
+    }
+    collectBranch(rootName);
+
+    const $ = go.GraphObject.make;
+    const diagram = $(go.Diagram, "tree", {
+      initialContentAlignment: go.Spot.Center,
+      layout: $(go.TreeLayout, { angle: 90, layerSpacing: 35 }),
+      "undoManager.isEnabled": true
+    });
+
+    diagram.nodeTemplate =
+      $(go.Node, "Auto",
+        $(go.Shape, "RoundedRectangle",
+          { strokeWidth: 1, fill: "lightblue", stroke: "#00796b" },
+          new go.Binding("fill", "color")),
+        $(go.TextBlock,
+          {
+            margin: 8,
+            font: "bold 10pt sans-serif",
+            wrap: go.TextBlock.WrapFit,
+            width: 140,
+            editable: true
+          },
+          new go.Binding("text", "text").makeTwoWay())
+      );
+
+    diagram.linkTemplate =
+      $(go.Link,
+        { routing: go.Link.Orthogonal, corner: 5 },
+        $(go.Shape)
+      );
+
+    const nodeDataArray = [];
+    const linkDataArray = [];
+
+    for (const name in descendants) {
+      const m = descendants[name];
+      const spouses = Array.isArray(m.spouses) ? m.spouses.join(', ') : (m.spouse || '');
+      const label = `${m.name}${spouses ? ' & ' + spouses : ''}\n${m.birthYear || ''} ${m.birthPlace || ''}`;
+      const color = m.birthYear ? (parseInt(m.birthYear) < 1950 ? "#e1bee7" : "#c8e6c9") : "lightblue";
+      nodeDataArray.push({ key: m.name, text: label, color });
+
+      m.children.forEach(child => {
+        linkDataArray.push({ from: m.name, to: child });
+      });
+    }
+
+    diagram.model = new go.GraphLinksModel(nodeDataArray, linkDataArray);
+
+    diagram.addDiagramListener("ObjectSingleClicked", function (e) {
+      const node = e.subject.part;
+      if (!node) return;
+      const data = node.data;
+      const name = data.key;
+      const member = descendants[name];
+      if (!member) return;
+
+      nameInput.value = member.name;
+      spouseInput.value = (Array.isArray(member.spouses) ? member.spouses.join(", ") : "") || "";
+      birthYearInput.value = member.birthYear || "";
+      birthPlaceInput.value = member.birthPlace || "";
+      populateParentSelect(member.name);
+    });
+
+    function updateNode() {
+      const name = nameInput.value.trim();
+      if (!descendants[name]) return alert("Member not found in branch.");
+
+      descendants[name].spouses = spouseInput.value.split(",").map(s => s.trim()).filter(s => s);
+      descendants[name].birthYear = birthYearInput.value.trim();
+      descendants[name].birthPlace = birthPlaceInput.value.trim();
+
+      const spouses = descendants[name].spouses.join(', ');
+      const label = `${name}${spouses ? ' & ' + spouses : ''}\n${descendants[name].birthYear || ''} ${descendants[name].birthPlace || ''}`;
+      diagram.model.startTransaction("update text");
+      diagram.model.setDataProperty(diagram.findNodeForKey(name).data, "text", label);
+      diagram.model.commitTransaction("update text");
+
+      const merged = { ...fullTree, ...descendants };
+      localStorage.setItem(`tree_${user}`, JSON.stringify(merged));
+    }
+
+    function populateParentSelect(skipName) {
+      parentSelect.innerHTML = '<option value="">No Parent (Root)</option>';
+      Object.keys(descendants).forEach(name => {
+        if (name !== skipName) {
+          parentSelect.add(new Option(name, name));
+        }
+      });
+    }
+
+    function exportAsPNG() {
+      html2canvas(document.getElementById("tree")).then(canvas => {
+        const link = document.createElement('a');
+        link.download = 'branch_tree.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      });
+    }
+
+    function signOut() {
+      localStorage.removeItem("user");
+      window.location.href = "login.html";
+    }
+  </script>
+</body>
+</html>

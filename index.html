@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Family Tree Visual Builder</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gojs/2.3.14/go.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script>
+    if (!localStorage.getItem("user")) {
+      window.location.href = "login.html";
+    }
+  </script>
+</head>
+<body>
+  <div class="header">
+    <h1>Family Tree Builder (Visual)</h1>
+  </div>
+
+  <div class="form-section">
+    <input type="text" id="nameInput" placeholder="Name" required />
+    <input type="text" id="spouseInput" placeholder="Spouse(s), comma-separated (optional)" />
+    <input type="text" id="birthYearInput" placeholder="Year Born (optional)" />
+    <input type="text" id="birthPlaceInput" placeholder="Place Born (optional)" />
+    <select id="parentSelect">
+      <option value="">No Parent (Root)</option>
+    </select>
+    <button onclick="addMember()">Add Member</button>
+    <button onclick="updateMember()" style="display: none" id="updateBtn">Update Member</button>
+  </div>
+
+  <div class="controls">
+    <input type="text" id="searchInput" placeholder="Search by name..." oninput="searchMember()" />
+    <button onclick="saveToLocal()">💾 Save</button>
+    <button onclick="loadFromLocal()">📂 Load</button>
+    <button onclick="clearTree()">🗑️ Clear</button>
+    <button onclick="downloadJSON()">⬇️ Export JSON</button>
+    <button onclick="downloadCSV()">⬇️ Export CSV</button>
+    <button onclick="exportAsPNG()">📸 Export PNG</button>
+    <button onclick="signOut()">🚪 Sign Out</button>
+  </div>
+
+  <div class="controls">
+    <label for="branchSelect">🌿 View Branch of:</label>
+    <select id="branchSelect"></select>
+    <button onclick="launchBranch()">View Branch</button>
+  </div>
+
+  <div id="tree"></div>
+
+  <script src="script.js"></script>
+</body>
+</html>

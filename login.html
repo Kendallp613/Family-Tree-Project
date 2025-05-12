@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Sign In - Family Tree</title>
+  <style>
+    body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; }
+    #box { padding: 20px; border: 1px solid #ccc; border-radius: 8px; }
+    input { padding: 8px; margin: 8px 0; width: 100%; }
+    button { padding: 8px 12px; }
+  </style>
+</head>
+<body>
+  <div id="box">
+    <h2>Sign in to your Family Tree</h2>
+    <input id="username" type="text" placeholder="Enter your name or email" />
+    <button onclick="signIn()">Continue</button>
+  </div>
+
+  <script>
+    if (localStorage.getItem("user")) {
+      window.location.href = "index.html";
+    }
+
+    function signIn() {
+      const user = document.getElementById("username").value.trim().toLowerCase();
+      if (!user) return alert("Please enter your name or email.");
+      localStorage.setItem("user", user);
+      window.location.href = "index.html";
+    }
+  </script>
+</body>
+</html>
