@@ -134,6 +134,7 @@ function addMember() {
 
   clearForm();
   renderTree();
+  saveToLocal(); // ✅ Save after adding
 }
 
 function editMember(name) {
@@ -185,6 +186,7 @@ function updateMember() {
 
   clearForm();
   renderTree();
+  saveToLocal(); // ✅ Save after updating
 }
 
 function deleteMember(name) {
@@ -192,6 +194,7 @@ function deleteMember(name) {
   Object.values(family).forEach(m => m.children = m.children.filter(c => c !== name));
   delete family[name];
   renderTree();
+  saveToLocal(); // ✅ Save after deleting
 }
 
 function clearForm() {
